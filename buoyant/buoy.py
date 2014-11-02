@@ -1,10 +1,31 @@
+# The MIT License (MIT)
+# Copyright (c) 2014 Neil Freeman
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from lxml import etree
 from datetime import datetime
 from pytz import timezone
 import requests
 from io import BytesIO
 
-# example
+# example xml response
 '''<?xml version="1.0" ?>
 <observation id="ROBN4" lat="40.657" lon="-74.065" name="8530973 - Robbins Reef, NJ">
     <datetime>2014-11-01T01:30:00UTC</datetime>
@@ -46,13 +67,15 @@ class Buoy(dict):
 
     '''Wrapper for the NDBC Buoy information mini-API'''
 
+    _base_url = 'http://www.ndbc.noaa.gov/station_page.php?station={id}'
+
     def __init__(self, bouyid):
         super(Buoy, self).__init__()
         self._id = bouyid
         self.refresh()
 
     def _get_obs(self):
-        xml = _get(OBS_ENDPOINT, self.id)
+        xml = _get(OBS_ENDPOINT, self._id)
         return _parse(xml)
 
     def _set_obs(self, xml):
@@ -72,7 +95,11 @@ class Buoy(dict):
         self._set_obs(xml)
 
     @property
-    def image_path(self):
+    def url(self):
+        return self._base_url.format(id=self._id)
+
+    @property
+    def image_url(self):
         return '{0}?station={id}'.format(CAM_ENDPOINT, id=self._id)
 
     @property
@@ -103,48 +130,56 @@ class Buoy(dict):
         return self.get('name')
 
     @property
+    def units(self):
+        return self.get('units')
+
+    @property
     def winddirection(self):
         return self.get('winddir')
 
     @property
     def windspeed(self):
-        return self.get('windspeed')
+        return float(self.get('windspeed'))
 
     @property
     def wind_gust(self):
-        return self.get('windgust')
+        return float(self.get('windgust'))
 
     @property
     def pressure(self):
-        return self.get('pressure')
+        return float(self.get('pressure'))
 
     @property
     def airtemp(self):
-        return self.get('airtemp')
+        return float(self.get('airtemp'))
 
     @property
-    def coords(self):
-        return (self.get('lat'), self.get('lon'))
+    def watertemp(self):
+        return float(self.get('watertemp'))
 
     @property
     def lat(self):
-        return self.get('lat')
+        return float(self.get('lat'))
 
     @property
     def lon(self):
-        return self.get('lon')
+        return float(self.get('lon'))
+
+    @property
+    def coords(self):
+        return (self.lat, self.lon)
 
     @property
     def waveheight(self):
-        return self.get('waveht')
+        return float(self.get('waveht'))
 
     @property
     def domperiod(self):
-        return self.get('domperiod')
+        return float(self.get('domperiod'))
 
     @property
     def avgperiod(self):
-        return self.get('avgperiod')
+        return float(self.get('avgperiod'))
 
     @property
     def meanwavedir(self):
