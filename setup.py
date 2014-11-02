@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='data_buoy',
+    name='buoyant',
 
     version='0.1.0',
 
@@ -9,7 +9,7 @@ setup(
 
     long_description="Wrapper for NOAA National Data Buoy Center",
 
-    url='',
+    url='https://github.com/fitnr/buoyant',
 
     author='Neil Freeman',
 
@@ -17,7 +17,7 @@ setup(
 
     license='All rights reserved',
 
-    packages=['data_buoy'],
+    packages=['buoyant'],
 
     install_requires=[
         'lxml>=3.3',

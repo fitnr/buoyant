@@ -21,7 +21,6 @@ from io import BytesIO
 </observation>
 '''
 
-
 # both take station as argument
 OBS_ENDPOINT = "http://www.ndbc.noaa.gov/get_observation_as_xml.php"
 CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
@@ -43,12 +42,12 @@ def _setup_ndbc_dt(dt_string):
     return tz.localize(d)
 
 
-class Bouy(dict):
+class Buoy(dict):
 
     '''Wrapper for the NDBC Buoy information mini-API'''
 
     def __init__(self, bouyid):
-        super(Bouy, self).__init__()
+        super(Buoy, self).__init__()
         self._id = bouyid
         self.refresh()
 
