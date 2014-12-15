@@ -98,18 +98,12 @@ TYPES = {
 }
 
 
-def _get_obs(_id):
-    xml = _get(OBS_ENDPOINT, _id)
-    return _parse(xml)
-
-
 def _set_obs(cls, xml):
-    # Add meta, ignoring id
-    meta = dict(list(xml.items()))
-    del meta['id']
-
-    for key, value in list(meta.items()):
-        setattr(cls, key, value)
+    # Add observation meta, ignoring id
+    for key, value in xml.items():
+        if key != 'id':
+            typ = TYPES.get(key, str)
+            setattr(cls, key, typ(value))
 
     # Add data
     for child in xml.getchildren():
@@ -118,8 +112,24 @@ def _set_obs(cls, xml):
         setattr(cls, classkey, typ(child.text))
 
     # Read units from XML attributes and replace names with our kindler, gentler versions
-    units = dict((NAME_MAPPING.get(y.tag, y.tag), list(y.items()).pop()[1]) for y in xml if len(list(y.items())))
+    # And add any other metadata that might be in the attributes
+    units, meta = {}, {}
+    for node in xml:
+        if len(node.items()) == 0:
+            continue
+
+        attribs = dict(node.items())
+        name = NAMES.get(node.tag, node.tag)
+
+        if attribs.get('uom'):
+            units[name] = attribs['uom']
+            del attribs['uom']
+
+        if len(attribs) > 0:
+            meta[name] = attribs
+
     setattr(cls, 'units', units)
+    setattr(cls, 'meta', meta)
 
 
 class Buoy(object):
@@ -135,8 +145,8 @@ class Buoy(object):
         self.refresh()
 
     def refresh(self):
-        xml = _get_obs(self._id)
-        _set_obs(self, xml)
+        self.xml = _get(OBS_ENDPOINT, self.id)
+        _set_obs(self, _parse(self.xml))
 
     @property
     def url(self):
