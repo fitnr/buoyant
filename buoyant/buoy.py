@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # The MIT License (MIT)
 # Copyright (c) 2014 Neil Freeman
 
@@ -52,7 +53,10 @@ def _get(endpoint, bouyid):
 
 
 def _parse(xmlstring):
-    return etree.fromstring(bytes(xmlstring))
+    try:
+        return etree.fromstring(bytes(xmlstring))
+    except TypeError:
+        return etree.fromstring(bytes(xmlstring, 'utf-8'))
 
 
 def _setup_ndbc_dt(dt_string):
@@ -105,10 +109,10 @@ def _get_obs(_id):
 
 def _set_obs(cls, xml):
     # Add meta, ignoring id
-    meta = dict(xml.items())
+    meta = dict(list(xml.items()))
     del meta['id']
 
-    for key, value in meta.items():
+    for key, value in list(meta.items()):
         setattr(cls, key, value)
 
     # Add data
@@ -122,7 +126,7 @@ def _set_obs(cls, xml):
             setattr(cls, value, None)
 
     # Read units from XML attributes and replace names with our kindler, gentler versions
-    units = dict((NAME_MAPPING.get(y.tag, y.tag), y.items().pop()[1]) for y in xml if len(y.items()))
+    units = dict((NAME_MAPPING.get(y.tag, y.tag), list(y.items()).pop()[1]) for y in xml if len(list(y.items())))
     setattr(cls, 'units', units)
 
 
