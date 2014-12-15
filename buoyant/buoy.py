@@ -68,13 +68,11 @@ def _setup_ndbc_dt(dt_string):
 
 
 # lat, lon and name are assigned separately.
-NAME_MAPPING = {
+NAMES = {
     'airtemp': 'air_temp',
     'avgperiod': 'average_period',
-    'datetime': 'datetime',
     'domperiod': 'dominant_period',
     'meanwavedir': 'mean_wave_direction',
-    'pressure': 'pressure',
     'watertemp': 'water_temp',
     'waveht': 'wave_height',
     'winddir': 'wind_direction',
@@ -83,19 +81,17 @@ NAME_MAPPING = {
 
 }
 
-TYPE_MAPPING = {
+TYPES = {
     'airtemp': float,
     'avgperiod': float,
     'datetime': _setup_ndbc_dt,
+    'dewpoint': float,
     'domperiod': float,
     'lat': float,
     'lon': float,
-    'meanwavedir': str,
-    'name': str,
     'pressure': float,
     'watertemp': float,
     'waveht': float,
-    'winddir': str,
     'windgust': float,
     'windspeed': float,
 
@@ -117,8 +113,8 @@ def _set_obs(cls, xml):
 
     # Add data
     for child in xml.getchildren():
-        classkey = NAME_MAPPING.get(child.tag, child.tag)
-        typ = TYPE_MAPPING.get(child.tag, str)
+        classkey = NAMES.get(child.tag, child.tag)
+        typ = TYPES.get(child.tag, str)
         setattr(cls, classkey, typ(child.text))
 
     # Read units from XML attributes and replace names with our kindler, gentler versions
@@ -132,10 +128,10 @@ class Buoy(object):
 
     _base_url = 'http://www.ndbc.noaa.gov/station_page.php?station={id}'
 
-    lat, lon, name = None, None, None
+    lat, lon, xml = None, None, None
 
     def __init__(self, bouyid):
-        self._id = bouyid
+        self.id = bouyid
         self.refresh()
 
     def refresh(self):
@@ -144,15 +140,15 @@ class Buoy(object):
 
     @property
     def url(self):
-        return self._base_url.format(id=self._id)
+        return self._base_url.format(id=self.id)
 
     @property
     def image_url(self):
-        return '{0}?station={id}'.format(CAM_ENDPOINT, id=self._id)
+        return '{0}?station={id}'.format(CAM_ENDPOINT, id=self.id)
 
     @property
     def image(self):
-        i = requests.get(CAM_ENDPOINT, params={'station': self._id})
+        i = requests.get(CAM_ENDPOINT, params={'station': self.id})
         output = BytesIO()
 
         for chunk in i.iter_content():
