@@ -42,7 +42,7 @@ from io import BytesIO
 </observation>
 '''
 
-# both take station as argument
+# Both take station as a GET argument.
 OBS_ENDPOINT = "http://www.ndbc.noaa.gov/get_observation_as_xml.php"
 CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
 
@@ -63,36 +63,84 @@ def _setup_ndbc_dt(dt_string):
     return tz.localize(d)
 
 
-class Buoy(dict):
+# lat, lon and name are assigned separately.
+NAME_MAPPING = {
+    'airtemp': 'air_temp',
+    'avgperiod': 'average_period',
+    'datetime': 'datetime',
+    'domperiod': 'dominant_period',
+    'meanwavedir': 'mean_wave_direction',
+    'pressure': 'pressure',
+    'watertemp': 'water_temp',
+    'waveht': 'wave_height',
+    'winddir': 'wind_direction',
+    'windgust': 'wind_gust',
+    'windspeed': 'wind_speed',
+
+}
+
+TYPE_MAPPING = {
+    'airtemp': float,
+    'avgperiod': float,
+    'datetime': _setup_ndbc_dt,
+    'domperiod': float,
+    'lat': float,
+    'lon': float,
+    'meanwavedir': str,
+    'name': str,
+    'pressure': float,
+    'watertemp': float,
+    'waveht': float,
+    'winddir': str,
+    'windgust': float,
+    'windspeed': float,
+
+}
+
+
+def _get_obs(_id):
+    xml = _get(OBS_ENDPOINT, _id)
+    return _parse(xml)
+
+
+def _set_obs(cls, xml):
+    # Add meta, ignoring id
+    meta = dict(xml.items())
+    del meta['id']
+
+    for key, value in meta.items():
+        setattr(cls, key, value)
+
+    # Add data
+    for child in xml.getchildren():
+        classkey = NAME_MAPPING.get(child.tag, child.tag)
+        typ = TYPE_MAPPING.get(child.tag, str)
+        setattr(cls, classkey, typ(child.text))
+
+    for value in NAME_MAPPING.values():
+        if not hasattr(cls, value):
+            setattr(cls, value, None)
+
+    # Read units from XML attributes and replace names with our kindler, gentler versions
+    units = dict((NAME_MAPPING.get(y.tag, y.tag), y.items().pop()[1]) for y in xml if len(y.items()))
+    setattr(cls, 'units', units)
+
+
+class Buoy(object):
 
     '''Wrapper for the NDBC Buoy information mini-API'''
 
     _base_url = 'http://www.ndbc.noaa.gov/station_page.php?station={id}'
 
+    lat, lon, name = None, None, None
+
     def __init__(self, bouyid):
-        super(Buoy, self).__init__()
         self._id = bouyid
         self.refresh()
 
-    def _get_obs(self):
-        xml = _get(OBS_ENDPOINT, self._id)
-        return _parse(xml)
-
-    def _set_obs(self, xml):
-        # Add meta, ignoring id
-        meta = dict(xml.items())
-        del meta['id']
-        self.update(**meta)
-
-        # Add data
-        self.update(**dict((y.tag, y.text) for y in xml.getchildren()))
-
-        # Add units
-        self['units'] = dict((y.tag, y.items().pop()[1]) for y in xml if len(y.items()))
-
     def refresh(self):
-        xml = self._get_obs()
-        self._set_obs(xml)
+        xml = _get_obs(self._id)
+        _set_obs(self, xml)
 
     @property
     def url(self):
@@ -115,72 +163,5 @@ class Buoy(dict):
         return output
 
     @property
-    def datetime(self):
-        if type(self.datetime) == str:
-            self['datetime'] = _setup_ndbc_dt(self.datetime)
-
-        return self.get('datetime')
-
-    @property
-    def id(self):
-        return self.get('_id')
-
-    @property
-    def name(self):
-        return self.get('name')
-
-    @property
-    def units(self):
-        return self.get('units')
-
-    @property
-    def winddirection(self):
-        return self.get('winddir')
-
-    @property
-    def windspeed(self):
-        return float(self.get('windspeed'))
-
-    @property
-    def wind_gust(self):
-        return float(self.get('windgust'))
-
-    @property
-    def pressure(self):
-        return float(self.get('pressure'))
-
-    @property
-    def airtemp(self):
-        return float(self.get('airtemp'))
-
-    @property
-    def watertemp(self):
-        return float(self.get('watertemp'))
-
-    @property
-    def lat(self):
-        return float(self.get('lat'))
-
-    @property
-    def lon(self):
-        return float(self.get('lon'))
-
-    @property
     def coords(self):
         return (self.lat, self.lon)
-
-    @property
-    def waveheight(self):
-        return float(self.get('waveht'))
-
-    @property
-    def domperiod(self):
-        return float(self.get('domperiod'))
-
-    @property
-    def avgperiod(self):
-        return float(self.get('avgperiod'))
-
-    @property
-    def meanwavedir(self):
-        return self.get('meanwavedir')

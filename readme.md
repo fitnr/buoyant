@@ -1,6 +1,6 @@
 ## Buoyant
 
-Python wrapper for grabbing buoy data from the [National Buoy Sata Center](http://www.ndbc.noaa.gov).
+Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov).
 
 Example:
 ````python
@@ -34,7 +34,7 @@ station.image_url
 
 station.image
 # <_io.BytesIO object>
-# a [BytesIO object](https://docs.python.org/2/library/io.html)
+# a BytesIO object see https://docs.python.org/2/library/io.html
 
 station.url
 # http://www.ndbc.noaa.gov/station_page.php?station=13002
