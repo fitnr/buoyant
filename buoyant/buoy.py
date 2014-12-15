@@ -121,10 +121,6 @@ def _set_obs(cls, xml):
         typ = TYPE_MAPPING.get(child.tag, str)
         setattr(cls, classkey, typ(child.text))
 
-    for value in NAME_MAPPING.values():
-        if not hasattr(cls, value):
-            setattr(cls, value, None)
-
     # Read units from XML attributes and replace names with our kindler, gentler versions
     units = dict((NAME_MAPPING.get(y.tag, y.tag), list(y.items()).pop()[1]) for y in xml if len(list(y.items())))
     setattr(cls, 'units', units)
