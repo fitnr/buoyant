@@ -36,17 +36,19 @@ Some buoys have cameras!
 
 ````python
 station = Buoy(41009)
-station.image_url
-# http://www.ndbc.noaa.gov/images/buoycam/Z14C_2014_11_01_2200.jpg
 
+station.image_url
+# 'http://www.ndbc.noaa.gov/images/buoycam/Z14C_2014_11_01_2200.jpg'
+
+# Save image as a file 'out.jpg'
+station.write_image('out.jpg')
+
+# Get raw image as a BytesIO object (see https://docs.python.org/2/library/io.html)
 station.image
 # <_io.BytesIO object>
-# a BytesIO object (see https://docs.python.org/2/library/io.html)
-with open('station.jpg', 'wb') as f:
-    f.write(station.image.read())
 
 station.url
-# http://www.ndbc.noaa.gov/station_page.php?station=13002
+# 'http://www.ndbc.noaa.gov/station_page.php?station=41009'
 ````
 
 ### Measurement metadata
@@ -57,10 +59,10 @@ The occassional buoy reports metadata about its measurements. The `Buoy` object 
 frying_pan = Buoy(41013)
 
 frying_pan.pressure
-30.1
+# 30.1
 
 frying_pan.meta['pressure']
-{'tendency': 'steady'}
+# {'tendency': 'steady'}
 ````
 
 ### Measurements included
