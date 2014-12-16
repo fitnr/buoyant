@@ -2,15 +2,33 @@
 
 Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov).
 
-Example:
+This package works by parsing XML from a NBDC endpoint. This isn't fully documented, so there's no guarantee of its stability.
+
+The NBDC provides a [list](http://www.ndbc.noaa.gov/to_station.shtml) and a [map](http://www.ndbc.noaa.gov/obs.shtml) of active buoys.
+
+Hello buoy example:
+
 ````python
 from buoyant import Buoy
 
 # construct the Buoy object with the station ID
+# It's an alphanumeric code. If its numeric, an integer works fine.
 station = Buoy(13002)
 
+station.name
+# 'Soul'
+# Yes, that buoy is really named Soul.
+````
+
+More examples:
+
+````python
+from buoyant import Buoy
+
+station = Buoy('lndc1')
+
 station.wind_speed
-# 15.9
+# 9.9
 
 station.units['wind_speed']
 # 'kt'
@@ -28,11 +46,15 @@ station.datetime
 # Not all stations report all data.
 station.wave_height
 # raises AttributeError
+
+# Fetches new data. This isn't very useful, since the buoys update only every hour or so
+station.refresh()
+
 ````
 
 ### Images
 
-Some buoys have cameras!
+Some buoys have cameras! If the buoy doesn't have an active camera, a placeholder image provided by the NBDC will be returned.
 
 ````python
 station = Buoy(41009)
@@ -54,6 +76,7 @@ station.url
 ### Measurement metadata
 
 The occassional buoy reports metadata about its measurements. The `Buoy` object has a meta attribute with this data, if any.
+
 ````python
 # Buoy in the Frying Pan Shoals, NC
 frying_pan = Buoy(41013)
@@ -63,6 +86,16 @@ frying_pan.pressure
 
 frying_pan.meta['pressure']
 # {'tendency': 'steady'}
+````
+
+### No data
+
+Sometimes buoys don't have recent data. You'll be able to tell two ways. First, the `Buoy` object won't have many attributes. Second, there will be a message. It will say 'No data'.
+
+````python
+station = Buoy('ANRN6')
+station.message
+# 'No data'
 ````
 
 ### Measurements included
@@ -85,6 +118,18 @@ Measurements often included (the text in parentheses is the one used on the NBDC
 * lat (latitude)
 * lon (longitude)
 * pressure (PRES)
+
+Water quality data isn't included in the XML data source. Neither is the elevation of the station or the location of the instruments relative to the station.
+
+### XML
+
+Get the raw XML, if you like XML for some reason. Maybe the package is missing something? If so, submit an issue or pull request!
+
+````python
+soul = Buoy('13010')
+soul.xml
+u'<?xml version="1.0" encoding="UTF-8"?>\n<observation id="13010" name="Soul" lat="-0.01" lon="0.00">\n  <datetime>2014-12-16T02:00:00UTC</datetime>\n  <winddir uom="degT">190</winddir>\n  <windspeed uom="kt">9.9</windspeed>\n  <airtemp uom="F">78.8</airtemp>\n</observation>\n'
+````
 
 ### Compatibility
 

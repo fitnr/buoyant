@@ -73,6 +73,7 @@ NAMES = {
     'avgperiod': 'average_period',
     'domperiod': 'dominant_period',
     'meanwavedir': 'mean_wave_direction',
+    'msg': 'message',
     'watertemp': 'water_temp',
     'waveht': 'wave_height',
     'winddir': 'wind_direction',
@@ -103,7 +104,8 @@ def _set_obs(cls, xml):
     for key, value in xml.items():
         if key != 'id':
             typ = TYPES.get(key, str)
-            setattr(cls, key, typ(value))
+            classkey = NAMES.get(key, key)
+            setattr(cls, classkey, typ(value))
 
     # Add data
     for child in xml.getchildren():
