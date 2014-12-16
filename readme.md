@@ -41,7 +41,9 @@ station.image_url
 
 station.image
 # <_io.BytesIO object>
-# a BytesIO object see https://docs.python.org/2/library/io.html
+# a BytesIO object (see https://docs.python.org/2/library/io.html)
+with open('station.jpg', 'wb') as f:
+    f.write(station.image.read())
 
 station.url
 # http://www.ndbc.noaa.gov/station_page.php?station=13002
