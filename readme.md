@@ -1,8 +1,6 @@
 ## Buoyant
 
-Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov).
-
-This package works by parsing XML from a NBDC endpoint. This isn't fully documented, so there's no guarantee of its stability.
+Buoyant is a Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov). It parses XML from a NBDC endpoint. This data source isn't fully documented, so there's no guarantee of its stability.
 
 The NBDC provides a [list](http://www.ndbc.noaa.gov/to_station.shtml) and a [map](http://www.ndbc.noaa.gov/obs.shtml) of active buoys.
 
@@ -123,15 +121,24 @@ Water quality data isn't included in the XML data source. Neither is the elevati
 
 ### XML
 
-Get the raw XML, if you like XML for some reason. Maybe the package is missing something? If so, submit an issue or pull request!
+Get the raw XML, if you like XML for some reason. Maybe the package is missing something? If so, submit an [issue](https://github.com/fitnr/buoyant/issues) or [pull request](https://github.com/fitnr/buoyant/pulls)!
 
 ````python
 soul = Buoy('13010')
 soul.xml
-u'<?xml version="1.0" encoding="UTF-8"?>\n<observation id="13010" name="Soul" lat="-0.01" lon="0.00">\n  <datetime>2014-12-16T02:00:00UTC</datetime>\n  <winddir uom="degT">190</winddir>\n  <windspeed uom="kt">9.9</windspeed>\n  <airtemp uom="F">78.8</airtemp>\n</observation>\n'
+'''<?xml version="1.0" encoding="UTF-8"?>
+<observation id="13010" name="Soul" lat="-0.01" lon="0.00">
+  <datetime>2014-12-16T02:00:00UTC</datetime>
+  <winddir uom="degT">190</winddir>
+  <windspeed uom="kt">9.9</windspeed>
+  <airtemp uom="F">78.8</airtemp>
+  </observation>'''
 ````
 
 ### Compatibility
 
 Buoyant is compatible with Python 2 and 3.
 
+### License
+
+Buoyant is licensed under the [GPL](http://www.gnu.org/licenses/#GPL).
