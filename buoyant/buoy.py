@@ -156,17 +156,22 @@ class Buoy(object):
     def image_url(self):
         return '{0}?station={id}'.format(CAM_ENDPOINT, id=self.id)
 
+    def _write_img(self, handle):
+        i = requests.get(CAM_ENDPOINT, params={'station': self.id})
+        for chunk in i.iter_content():
+            handle.write(chunk)
+
     @property
     def image(self):
-        i = requests.get(CAM_ENDPOINT, params={'station': self.id})
         output = BytesIO()
-
-        for chunk in i.iter_content():
-            output.write(chunk)
-
+        self._write_img(output)
         output.seek(0)
 
         return output
+
+    def save_image(self, filename):
+        with open(filename, 'wb') as f:
+            self._write_img(f)
 
     @property
     def coords(self):
