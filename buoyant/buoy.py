@@ -100,6 +100,7 @@ TYPES = {
 
 
 def _set_obs(cls, xml):
+    """Store observation data in the Buoy class."""
     # Add observation meta, ignoring id
     for key, value in xml.items():
         if key != 'id':
@@ -117,9 +118,6 @@ def _set_obs(cls, xml):
     # And add any other metadata that might be in the attributes
     units, meta = {}, {}
     for node in xml:
-        if len(node.items()) == 0:
-            continue
-
         attribs = dict(node.items())
         name = NAMES.get(node.tag, node.tag)
 
