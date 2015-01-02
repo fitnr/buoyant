@@ -11,7 +11,7 @@ from buoyant import Buoy
 
 # construct the Buoy object with the station ID
 # It's an alphanumeric code. If its numeric, an integer works fine.
-station = Buoy(13002)
+station = Buoy(13010)
 
 station.name
 # 'Soul'
