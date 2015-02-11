@@ -1,16 +1,23 @@
 from setuptools import setup
 
-try:
-    from pypandoc import convert
-    read_md = lambda f: convert(f, 'rst')
-except ImportError:
-    print("pypandoc module not found, could not convert Markdown to RST")
-    read_md = lambda f: open(f, 'r').read()
+def read_md(f):
+    try:
+        try:
+            from pypandoc import convert
+            return convert(f, 'rst')
+
+        except ImportError:
+            print("pypandoc not found, could not convert Markdown to RST")
+            return open(f, 'r').read()
+
+    except (IOError, RuntimeError):
+        print("Could not read readme.md")
+        return ''
 
 setup(
     name='buoyant',
 
-    version='0.2.2',
+    version='0.2.3',
 
     description="Wrapper for the NOAA National Data Buoy Center",
 
