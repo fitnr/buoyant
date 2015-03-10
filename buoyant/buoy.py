@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from lxml import etree
+from xml.dom.minidom import parseString
 from datetime import datetime
 from pytz import timezone
 import requests
@@ -45,12 +45,23 @@ CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
 def _get(endpoint, bouyid):
     return requests.get(endpoint, params={'station': bouyid}).text
 
+def get_text(node):
+    while node.nodeType == node.ELEMENT_NODE:
+        node = node.childNodes[0]
+
+    if node.nodeType == node.TEXT_NODE:
+        return node.data
+
+def get_attrs(elem):
+    return ((k, v.value) for k, v in elem._attrs.items())
 
 def _parse(xmlstring):
     try:
-        return etree.fromstring(bytes(xmlstring))
+        xml = parseString(bytes(xmlstring))
     except TypeError:
-        return etree.fromstring(bytes(xmlstring, 'utf-8'))
+        xml = parseString(bytes(xmlstring, 'utf-8'))
+
+    return xml.getElementsByTagName('observation').item(0)
 
 
 def _setup_ndbc_dt(dt_string):
@@ -89,31 +100,33 @@ TYPES = {
     'waveht': float,
     'windgust': float,
     'windspeed': float,
-
 }
 
 
 def _set_obs(cls, xml):
     """Store observation data in the Buoy class."""
     # Add observation meta, ignoring id
-    for key, value in xml.items():
+    for key, value in get_attrs(xml):
         if key != 'id':
             typ = TYPES.get(key, str)
             classkey = NAMES.get(key, key)
             setattr(cls, classkey, typ(value))
 
+    children = [node for node in xml.childNodes if node.nodeType == node.ELEMENT_NODE]
+
     # Add data
-    for child in xml.getchildren():
-        classkey = NAMES.get(child.tag, child.tag)
-        typ = TYPES.get(child.tag, str)
-        setattr(cls, classkey, typ(child.text))
+    for child in children:
+        if child.nodeType == child.ELEMENT_NODE:
+            classkey = NAMES.get(child.tagName, child.tagName)
+            typ = TYPES.get(child.tagName, str)
+            setattr(cls, classkey, typ(get_text(child)))
 
     # Read units from XML attributes and replace names with our kindler, gentler versions
     # And add any other metadata that might be in the attributes
     units, meta = {}, {}
-    for node in xml:
-        attribs = dict(node.items())
-        name = NAMES.get(node.tag, node.tag)
+    for node in children:
+        attribs = dict(get_attrs(node))
+        name = NAMES.get(node.tagName, node.tagName)
 
         if attribs.get('uom'):
             units[name] = attribs['uom']

@@ -17,7 +17,7 @@ def read_md(f):
 setup(
     name='buoyant',
 
-    version='0.2.3',
+    version='0.3.0',
 
     description="Wrapper for the NOAA National Data Buoy Center",
 
@@ -34,8 +34,7 @@ setup(
     packages=['buoyant'],
 
     install_requires=[
-        'lxml>=3.3',
-        'requests>=2.4.1'
+        'requests >=2.4.1, <2.6',
     ],
 
     classifiers=[
