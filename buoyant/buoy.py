@@ -45,6 +45,7 @@ CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
 def _get(endpoint, bouyid):
     return requests.get(endpoint, params={'station': bouyid}).text
 
+
 def get_text(node):
     while node.nodeType == node.ELEMENT_NODE:
         node = node.childNodes[0]
@@ -52,8 +53,10 @@ def get_text(node):
     if node.nodeType == node.TEXT_NODE:
         return node.data
 
+
 def get_attrs(elem):
-    return ((k, v.value) for k, v in elem._attrs.items())
+    return ((k, v) for k, v in elem.attributes.items())
+
 
 def _parse(xmlstring):
     try:

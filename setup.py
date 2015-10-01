@@ -46,4 +46,6 @@ setup(
         'Topic :: Scientific/Engineering :: Atmospheric Science',
         'Intended Audience :: Science/Research',
     ],
+
+    test_suite='tests',
 )

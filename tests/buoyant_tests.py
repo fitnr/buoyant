@@ -13,7 +13,11 @@ class BuoyTestCase(unittest.TestCase):
         assert type(self.b) == buoyant.Buoy
 
     def test_data_exists(self):
-        assert type(self.b.xml) == unicode
+        try:
+            assert type(self.b.xml) == unicode
+        except NameError:
+            assert type(self.b.xml) == str
+
         assert type(self.b.datetime) == datetime.datetime
         assert type(self.b.image) == BytesIO
 
