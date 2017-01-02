@@ -17,7 +17,6 @@ import re
 from io import BytesIO, StringIO
 import requests
 from pytz import utc
-from . import timezone
 
 # Both take station as a GET argument.
 OBS_ENDPOINT = "http://sdf.ndbc.noaa.gov/sos/server.php"
@@ -33,46 +32,6 @@ responseformat=text/csv
 eventtime=latest
 '''
 
-# lat, lon, datetime are assigned separately.
-PROPERTIES = [
-    'air_pressure_at_sea_level',
-    'air_temperature',
-    'currents',
-    'sea_floor_depth_below_sea_surface',
-    'sea_water_electrical_conductivity',
-    'sea_water_salinity',
-    'sea_water_temperature',
-    'waves',
-    'winds',
-]
-
-
-CURRENTS_PROPERTIES = [
-    'bin',  # (count)
-    'depth',  # (m)
-    'direction_of_sea_water_velocity',  # (degree)
-    'sea_water_speed',  # (c/s)
-    'upward_sea_water_velocity',  # (c/s)
-    'error_velocity',  # (c/s)
-    'platform_orientation',  # (degree)
-    'platform_pitch_angle',  # (degree)
-    'platform_roll_angle',  # (degree)
-    'sea_water_temperature',  # (C)
-    'pct_good_3_beam',  # (%)
-    'pct_good_4_beam',  # (%)
-    'pct_rejected',  # (%)
-    'pct_bad',  # (%)
-    'echo_intensity_beam1',  # (count)
-    'echo_intensity_beam2',  # (count)
-    'echo_intensity_beam3',  # (count)
-    'echo_intensity_beam4',  # (count)
-    'correlation_magnitude_beam1',  # (count)
-    'correlation_magnitude_beam2',  # (count)
-    'correlation_magnitude_beam3',  # (count)
-    'correlation_magnitude_beam4',  # (count)
-    'quality_flags',
-]
-
 
 def parse_unit(prop, dictionary):
     matches = [k for k in dictionary.keys() if prop in k]
@@ -80,20 +39,25 @@ def parse_unit(prop, dictionary):
         value = dictionary[matches[0]]
         unit = re.search(r' \(([^)]+)\)', matches[0])
 
-        if not unit:
-            return value
-
-        if not value:
-            return None
-
-        return Observation(value, unit.group(1))
-
     except IndexError:
         return None
 
+    # Sometimes we get a list of values (e.g. waves)
+    if ';' in value:
+        if unit:
+            return [Observation(v, unit.group(1)) for v in value.split(';')]
+        else:
+            return value.split(';')
 
-def _currents(iterable):
-    return [{prop: parse_unit(prop, row) for prop in CURRENTS_PROPERTIES} for row in iterable]
+    # Sometimes there's no value! Sometimes there's no unit!
+    if not value or not unit:
+        return value or None
+
+    return Observation(value, unit.group(1))
+
+
+def _degroup(iterable, propertylist):
+    return [{prop: parse_unit(prop, row) for prop in propertylist} for row in iterable]
 
 
 '''
@@ -147,8 +111,8 @@ class Buoy(object):
         try:
             reader = csv.DictReader(StringIO(request.text))
 
-            if observation == 'currents':
-                return _currents(reader)
+            if observation in ('currents', 'waves', 'winds'):
+
             else:
                 result = next(reader)
 
@@ -203,11 +167,11 @@ class Buoy(object):
 
     @property
     def waves(self):
-        return self._get('waves')
+        return self._get('waves')[0]
 
     @property
     def winds(self):
-        return self._get('winds')
+        return self._get('winds')[0]
 
     @property
     def image_url(self):
