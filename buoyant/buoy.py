@@ -12,13 +12,12 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from datetime import datetime
 import csv
 import re
 from io import BytesIO, StringIO
-from pytz import timezone
 import requests
-
+from pytz import utc
+from . import timezone
 
 # Both take station as a GET argument.
 OBS_ENDPOINT = "http://sdf.ndbc.noaa.gov/sos/server.php"
@@ -75,16 +74,6 @@ CURRENTS_PROPERTIES = [
 ]
 
 
-def _setup_ndbc_dt(dt):
-    '''parse the kind of datetime we're likely to get'''
-    d = datetime.strptime(dt[:-1], '%Y-%m-%dT%H:%M:%S')
-
-    if dt[-1:] == 'Z':
-        return timezone('utc').localize(d)
-    else:
-        return d
-
-
 def parse_unit(prop, dictionary):
     matches = [k for k in dictionary.keys() if prop in k]
     try:
@@ -126,9 +115,15 @@ class Buoy(object):
         'responseformat': 'text/csv',
     }
 
-    def __init__(self, bouyid):
+    def __init__(self, bouyid, eventtime=None):
         self.id = bouyid
         self.refresh()
+
+        if eventtime:
+            if eventtime.tzinfo:
+                eventtime = eventtime.astimezone(utc)
+            eventtime = timezone.iso_format(eventtime)
+        self.eventtime = eventtime or 'latest'
 
     def refresh(self):
         self.__dict__ = {
@@ -141,12 +136,12 @@ class Buoy(object):
         return self.__dict__.setdefault(observation, self.fetch(observation))
 
     def fetch(self, observation):
-        p = {
+        params = {
             'offering': 'urn:ioos:station:wmo:{}'.format(self.id),
             'observedproperty': observation,
-            'eventtime': 'latest'
+            'eventtime': self.eventtime
         }
-        params = dict(self.params.items() + p.items())
+        params.update(self.params)
         request = requests.get(OBS_ENDPOINT, params=params)
 
         try:
@@ -168,7 +163,7 @@ class Buoy(object):
         try:
             self.__dict__['lon'] = float(result.get('longitude (degree)'))
             self.__dict__['lat'] = float(result.get('latitude (degree)'))
-            self.__dict__['datetime'] = _setup_ndbc_dt(result.get('date_time'))
+            self.__dict__['datetime'] = timezone.parse_datetime(result.get('date_time'))
 
         except TypeError:
             self.__dict__['lon'], self.__dict__['lat'] = None, None
