@@ -214,7 +214,7 @@ class Buoy(object):
 class Observation(float):
 
     def __init__(self, value, unit):
-        self._raw = value
+        self.value = value
         self._unit = unit
 
     def __new__(cls, value, *args):

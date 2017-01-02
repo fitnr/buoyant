@@ -43,6 +43,16 @@ sturgeon_buoy.wave_height
 sturgeon_buoy.refresh()
 ````
 
+The `Observation` object is numeric value (a `float`) with two additional attributes, `unit` and `value`. Generally `unit` this is an abbreviation for a metric unit or composition of units. You can use `Observation`s just like numeric objects, and use the `value` or `unit` field when `format`ting:
+```python
+> pressure = buoy.air_pressure_at_sea_level
+Observation(1014.1, 'hPa')
+> min(pressure, 1020)
+Observation(1014.1, 'hPa')
+> '{0.value} [{0.unit}]'.format(pressure)
+'1014.1 [hPa]'
+```
+
 ### Images
 
 Some buoys have cameras! If the buoy doesn't have an active camera, a placeholder image provided by the NBDC will be returned.
