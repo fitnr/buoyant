@@ -11,7 +11,7 @@ except IOError:
 setup(
     name='buoyant',
 
-    version='0.4.1',
+    version='0.5.0',
 
     description="Wrapper for the NOAA National Data Buoy Center",
 
@@ -29,7 +29,7 @@ setup(
 
     install_requires=[
         'requests >=2.4.1, <3.0',
-        'pytz>=2015.6'
+        'pytz>=2015.6, <2018'
     ],
 
     classifiers=[
