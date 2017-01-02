@@ -12,155 +12,207 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-from xml.dom.minidom import parseString
 from datetime import datetime
+import csv
+import re
+from io import BytesIO, StringIO
 from pytz import timezone
 import requests
-from io import BytesIO
 
-# example xml response
-'''<?xml version="1.0" ?>
-<observation id="ROBN4" lat="40.657" lon="-74.065" name="8530973 - Robbins Reef, NJ">
-    <datetime>2014-11-01T01:30:00UTC</datetime>
-    <winddir uom="degT">50</winddir>
-    <windspeed uom="kt">17.1</windspeed>
-    <windgust uom="kt">22.0</windgust>
-    <pressure uom="in">29.83</pressure>
-    <airtemp uom="F">53.6</airtemp>
-
-    <waveht uom="ft">12.8</waveht>
-    <domperiod uom="sec">10</domperiod>
-    <avgperiod uom="sec">7.1</avgperiod>
-    <meanwavedir uom="degT">353</meanwavedir>
-</observation>
-'''
 
 # Both take station as a GET argument.
-OBS_ENDPOINT = "http://www.ndbc.noaa.gov/get_observation_as_xml.php"
+OBS_ENDPOINT = "http://sdf.ndbc.noaa.gov/sos/server.php"
 CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
 
+'''
+request=GetObservation
+service=SOS
+version=1.0.0
+offering=urn:ioos:station:wmo:41012
+observedproperty=air_pressure_at_sea_level
+responseformat=text/csv
+eventtime=latest
+'''
 
-def _get(endpoint, bouyid):
-    return requests.get(endpoint, params={'station': bouyid}).text
-
-
-def get_text(node):
-    while node.nodeType == node.ELEMENT_NODE:
-        node = node.childNodes[0]
-
-    if node.nodeType == node.TEXT_NODE:
-        return node.data
-
-
-def get_attrs(elem):
-    return ((k, v) for k, v in elem.attributes.items())
-
-
-def _parse(xmlstring):
-    try:
-        xml = parseString(bytes(xmlstring))
-    except TypeError:
-        xml = parseString(bytes(xmlstring, 'utf-8'))
-
-    return xml.getElementsByTagName('observation').item(0)
+# lat, lon, datetime are assigned separately.
+PROPERTIES = [
+    'air_pressure_at_sea_level',
+    'air_temperature',
+    'currents',
+    'sea_floor_depth_below_sea_surface',
+    'sea_water_electrical_conductivity',
+    'sea_water_salinity',
+    'sea_water_temperature',
+    'waves',
+    'winds',
+]
 
 
-def _setup_ndbc_dt(dt_string):
+CURRENTS_PROPERTIES = [
+    'bin',  # (count)
+    'depth',  # (m)
+    'direction_of_sea_water_velocity',  # (degree)
+    'sea_water_speed',  # (c/s)
+    'upward_sea_water_velocity',  # (c/s)
+    'error_velocity',  # (c/s)
+    'platform_orientation',  # (degree)
+    'platform_pitch_angle',  # (degree)
+    'platform_roll_angle',  # (degree)
+    'sea_water_temperature',  # (C)
+    'pct_good_3_beam',  # (%)
+    'pct_good_4_beam',  # (%)
+    'pct_rejected',  # (%)
+    'pct_bad',  # (%)
+    'echo_intensity_beam1',  # (count)
+    'echo_intensity_beam2',  # (count)
+    'echo_intensity_beam3',  # (count)
+    'echo_intensity_beam4',  # (count)
+    'correlation_magnitude_beam1',  # (count)
+    'correlation_magnitude_beam2',  # (count)
+    'correlation_magnitude_beam3',  # (count)
+    'correlation_magnitude_beam4',  # (count)
+    'quality_flags',
+]
+
+
+def _setup_ndbc_dt(dt):
     '''parse the kind of datetime we're likely to get'''
-    d = datetime.strptime(dt_string[:-3], '%Y-%m-%dT%H:%M:%S')
-    tz = timezone(dt_string[-3:])
+    d = datetime.strptime(dt[:-1], '%Y-%m-%dT%H:%M:%S')
 
-    return tz.localize(d)
-
-
-# lat, lon and name are assigned separately.
-NAMES = {
-    'airtemp': 'air_temp',
-    'avgperiod': 'average_period',
-    'domperiod': 'dominant_period',
-    'meanwavedir': 'mean_wave_direction',
-    'msg': 'message',
-    'watertemp': 'water_temp',
-    'waveht': 'wave_height',
-    'winddir': 'wind_direction',
-    'windgust': 'wind_gust',
-    'windspeed': 'wind_speed',
-
-}
-
-TYPES = {
-    'airtemp': float,
-    'avgperiod': float,
-    'datetime': _setup_ndbc_dt,
-    'dewpoint': float,
-    'domperiod': float,
-    'lat': float,
-    'lon': float,
-    'pressure': float,
-    'watertemp': float,
-    'waveht': float,
-    'windgust': float,
-    'windspeed': float,
-}
+    if dt[-1:] == 'Z':
+        return timezone('utc').localize(d)
+    else:
+        return d
 
 
-def _set_obs(cls, xml):
-    """Store observation data in the Buoy class."""
-    # Add observation meta, ignoring id
-    for key, value in get_attrs(xml):
-        if key != 'id':
-            typ = TYPES.get(key, str)
-            classkey = NAMES.get(key, key)
-            setattr(cls, classkey, typ(value))
+def parse_unit(prop, dictionary):
+    matches = [k for k in dictionary.keys() if prop in k]
+    try:
+        value = dictionary[matches[0]]
+        unit = re.search(r' \(([^)]+)\)', matches[0])
 
-    children = [node for node in xml.childNodes if node.nodeType == node.ELEMENT_NODE]
+        if not unit:
+            return value
 
-    # Add data
-    for child in children:
-        if child.nodeType == child.ELEMENT_NODE:
-            classkey = NAMES.get(child.tagName, child.tagName)
-            typ = TYPES.get(child.tagName, str)
-            setattr(cls, classkey, typ(get_text(child)))
+        if not value:
+            return None
 
-    # Read units from XML attributes and replace names with our kindler, gentler versions
-    # And add any other metadata that might be in the attributes
-    units, meta = {}, {}
-    for node in children:
-        attribs = dict(get_attrs(node))
-        name = NAMES.get(node.tagName, node.tagName)
+        return Observation(value, unit.group(1))
 
-        if attribs.get('uom'):
-            units[name] = attribs['uom']
-            del attribs['uom']
+    except IndexError:
+        return None
 
-        if len(attribs) > 0:
-            meta[name] = attribs
 
-    setattr(cls, 'units', units)
-    setattr(cls, 'meta', meta)
+def _currents(iterable):
+    return [{prop: parse_unit(prop, row) for prop in CURRENTS_PROPERTIES} for row in iterable]
+
+
+'''
+Response looks like:
+station_id,sensor_id,"latitude (degree)","longitude (degree)",date_time,"depth (m)","air_pressure_at_sea_level (hPa)"
+urn:ioos:station:wmo:41012,urn:ioos:sensor:wmo:41012::baro1,30.04,-80.55,2014-02-19T12:50:00Z,0.00,1022.1
+'''
 
 
 class Buoy(object):
 
     '''Wrapper for the NDBC Buoy information mini-API'''
 
-    _base_url = 'http://www.ndbc.noaa.gov/station_page.php?station={id}'
-
-    lat, lon, xml = None, None, None
+    __dict__ = {}
+    params = {
+        'request': 'GetObservation',
+        'service': 'SOS',
+        'version': '1.0.0',
+        'responseformat': 'text/csv',
+    }
 
     def __init__(self, bouyid):
         self.id = bouyid
         self.refresh()
 
     def refresh(self):
-        self.xml = _get(OBS_ENDPOINT, self.id)
-        _set_obs(self, _parse(self.xml))
+        self.__dict__ = {
+            'lat': None,
+            'lon': None,
+            'datetime': None,
+        }
+
+    def _get(self, observation):
+        return self.__dict__.setdefault(observation, self.fetch(observation))
+
+    def fetch(self, observation):
+        p = {
+            'offering': 'urn:ioos:station:wmo:{}'.format(self.id),
+            'observedproperty': observation,
+            'eventtime': 'latest'
+        }
+        params = dict(self.params.items() + p.items())
+        request = requests.get(OBS_ENDPOINT, params=params)
+
+        try:
+            reader = csv.DictReader(StringIO(request.text))
+
+            if observation == 'currents':
+                return _currents(reader)
+            else:
+                result = next(reader)
+
+            if 'ows:ExceptionReport' in str(result):
+                raise AttributeError(observation)
+
+        except StopIteration:
+            raise AttributeError(observation)
+
+        self.__dict__['station_id'] = result.get('station_id')
+        self.__dict__['sensor_id'] = result.get('sensor_id')
+        try:
+            self.__dict__['lon'] = float(result.get('longitude (degree)'))
+            self.__dict__['lat'] = float(result.get('latitude (degree)'))
+            self.__dict__['datetime'] = _setup_ndbc_dt(result.get('date_time'))
+
+        except TypeError:
+            self.__dict__['lon'], self.__dict__['lat'] = None, None
+            self.__dict__['datetime'] = None
+
+        self.__dict__['depth'] = parse_unit('depth', result)
+
+        return parse_unit(observation, result)
 
     @property
-    def url(self):
-        return self._base_url.format(id=self.id)
+    def air_pressure_at_sea_level(self):
+        return self._get('air_pressure_at_sea_level')
+
+    @property
+    def air_temperature(self):
+        return self._get('air_temperature')
+
+    @property
+    def currents(self):
+        return self._get('currents')
+
+    @property
+    def sea_floor_depth_below_sea_surface(self):
+        return self._get('sea_floor_depth_below_sea_surface')
+
+    @property
+    def sea_water_electrical_conductivity(self):
+        return self._get('sea_water_electrical_conductivity')
+
+    @property
+    def sea_water_salinity(self):
+        return self._get('sea_water_salinity')
+
+    @property
+    def sea_water_temperature(self):
+        return self._get('sea_water_temperature')
+
+    @property
+    def waves(self):
+        return self._get('waves')
+
+    @property
+    def winds(self):
+        return self._get('winds')
 
     @property
     def image_url(self):
@@ -185,4 +237,32 @@ class Buoy(object):
 
     @property
     def coords(self):
-        return (self.lat, self.lon)
+        return self.__dict__.get('lat'), self.__dict__.get('lon')
+
+    @property
+    def depth(self):
+        return self.__dict__.get('depth')
+
+    @property
+    def datetime(self):
+        return self.__dict__.get('datetime')
+
+
+class Observation(float):
+
+    def __init__(self, value, unit):
+        self._raw = value
+        self._unit = unit
+
+    def __new__(cls, value, *args):
+        return float.__new__(cls, value)
+
+    @property
+    def unit(self):
+        return self._unit
+
+    def __repr__(self):
+        return "Observation({}, '{}')".format(self.__float__(), self.unit)
+
+    def __str__(self):
+        return "{} {}".format(self.__float__(), self.unit)
