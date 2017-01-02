@@ -1,8 +1,8 @@
 ## Buoyant
 
-Buoyant is a Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov). It parses XML from a NBDC endpoint. This data source isn't fully documented, so there's no guarantee of its stability.
+Buoyant is a Python wrapper for grabbing buoy data from the [National Buoy Data Center](http://www.ndbc.noaa.gov). It parses CSV from the [SDF](http://sdf.ndbc.noaa.gov) endpoint and images from the [BuoyCam](http://www.ndbc.noaa.gov/buoycams.shtml) service.
 
-The NBDC provides a [list](http://www.ndbc.noaa.gov/to_station.shtml) and a [map](http://www.ndbc.noaa.gov/obs.shtml) of active buoys.
+The NBDC provides a [list](http://sdf.ndbc.noaa.gov/stations.shtml) and a [map](http://sdf.ndbc.noaa.gov) of active buoys.
 
 Hello buoy example:
 
@@ -11,11 +11,7 @@ from buoyant import Buoy
 
 # construct the Buoy object with the station ID
 # It's an alphanumeric code. If its numeric, an integer works fine.
-station = Buoy(13010)
-
-station.name
-# 'Soul'
-# Yes, that buoy is really named Soul.
+buoy = Buoy(13010)
 ````
 
 More examples:
@@ -23,31 +19,28 @@ More examples:
 ````python
 from buoyant import Buoy
 
-station = Buoy('lndc1')
+sturgeon_buoy = Buoy('0Y2W3')
 
-station.wind_speed
-# 9.9
+sturgeon_buoy.air_pressure_at_sea_level
+# Observation(18.9, 'C')
+```
 
-station.units['wind_speed']
-# 'kt'
+The `Observation` object is numeric value (a `float`) with an additional attribute, `unit`. Generally this is an abbreviation for a metric unit or composition of units.
 
-station.lon
-# -23.14
+```
+sturgeon_buoy.coords
+# (44.794, -87.313)
 
-station.coords
-# (20.43, -23.14)
-
-# Get the time the measurements were made.
-station.datetime
-# datetime.datetime(2014, 12, 15, 20, 50, tzinfo=<UTC>)
+# Get the time the measurements were made. This can be some time ago!
+sturgeon_buoy.datetime
+# datetime.datetime(2015, 8, 18, 11, 40, tzinfo=<UTC>)
 
 # Not all stations report all data.
-station.wave_height
+sturgeon_buoy.wave_height
 # raises AttributeError
 
-# Fetches new data. This isn't very useful, since the buoys update only every hour or so
-station.refresh()
-
+# Clears the buoy object's data dictionary. This isn't very useful, since the buoys update only every hour or so
+sturgeon_buoy.refresh()
 ````
 
 ### Images
@@ -63,7 +56,7 @@ station.image_url
 # Save image as a file 'out.jpg'
 station.write_image('out.jpg')
 
-# Get raw image as a BytesIO object (see https://docs.python.org/2/library/io.html)
+# Get raw image as a `BytesIO` object
 station.image
 # <_io.BytesIO object>
 
@@ -71,69 +64,35 @@ station.url
 # 'http://www.ndbc.noaa.gov/station_page.php?station=41009'
 ````
 
-### Measurement metadata
-
-The occassional buoy reports metadata about its measurements. The `Buoy` object has a meta attribute with this data, if any.
-
-````python
-# Buoy in the Frying Pan Shoals, NC
-frying_pan = Buoy(41013)
-
-frying_pan.pressure
-# 30.1
-
-frying_pan.meta['pressure']
-# {'tendency': 'steady'}
-````
-
 ### No data
 
-Sometimes buoys don't have recent data. You'll be able to tell two ways. First, the `Buoy` object won't have many attributes. Second, there will be a message. It will say 'No data'.
+There are two ways to a buoy can be missing a certain data field. Either there's no recent observation, or that buoy doesn't observe that datum.
 
 ````python
-station = Buoy('ANRN6')
-station.message
-# 'No data'
+sturgeon = Buoy('0Y2W3')
+
+sturgeon.winds
+# None, because while this is usually recorded, it hasn't been.
+
+sturgeon.waves
+# raises AttributeError
 ````
 
 ### Measurements included
 
-Any measurements reported in the NBDC's XML api are included in a `Buoy` object. [Read about the meaning of the different measurements](http://www.ndbc.noaa.gov/measdes.shtml).
+* air_pressure_at_sea_level
+* air_temperature
+* currents
+* sea_floor_depth_below_sea_surface
+* sea_water_electrical_conductivity
+* sea_water_salinity
+* sea_water_temperature
+* waves
+* winds
 
-Measurements often included (the text in parentheses is the one used on the NBDC's [measurement descriptions page](http://www.ndbc.noaa.gov/measdes.shtml)):
+### Currents
 
-* air_temp (ATMP)
-* average_period (APD)
-* dominant_period (DPD)
-* mean_wave_direction (Spectral wave direction)
-* water_temp (WTMP)
-* wave_height (WVHT)
-* wind_direction (WDIR)
-* wind_gust (GST)
-* wind_speed (WSPD)
-* datetime
-* dewpoint (DEWP)
-* lat (latitude)
-* lon (longitude)
-* pressure (PRES)
-
-Water quality data isn't included in the XML data source. Neither is the elevation of the station or the location of the instruments relative to the station.
-
-### XML
-
-Get the raw XML, if you like XML for some reason. Maybe the package is missing something? If so, submit an [issue](https://github.com/fitnr/buoyant/issues) or [pull request](https://github.com/fitnr/buoyant/pulls)!
-
-````python
-soul = Buoy('13010')
-soul.xml
-'''<?xml version="1.0" encoding="UTF-8"?>
-<observation id="13010" name="Soul" lat="-0.01" lon="0.00">
-  <datetime>2014-12-16T02:00:00UTC</datetime>
-  <winddir uom="degT">190</winddir>
-  <windspeed uom="kt">9.9</windspeed>
-  <airtemp uom="F">78.8</airtemp>
-  </observation>'''
-````
+Currents data is a `list` of `dict`s with current information at different depths. It's not well-documented on the NBDC site, so good luck!
 
 ### Compatibility
 
