@@ -17,6 +17,7 @@ import re
 from io import BytesIO, StringIO
 import requests
 from pytz import utc
+from . import properties, timezone
 
 # Both take station as a GET argument.
 OBS_ENDPOINT = "http://sdf.ndbc.noaa.gov/sos/server.php"
@@ -34,7 +35,9 @@ eventtime=latest
 
 
 def parse_unit(prop, dictionary):
+    '''Do a fuzzy match for `prop` in the dictionary, taking into account unit suffix.'''
     matches = [k for k in dictionary.keys() if prop in k]
+
     try:
         value = dictionary[matches[0]]
         unit = re.search(r' \(([^)]+)\)', matches[0])
@@ -112,6 +115,7 @@ class Buoy(object):
             reader = csv.DictReader(StringIO(request.text))
 
             if observation in ('currents', 'waves', 'winds'):
+                return _degroup(reader, getattr(properties, observation))
 
             else:
                 result = next(reader)
