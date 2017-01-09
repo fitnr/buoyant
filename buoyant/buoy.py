@@ -105,10 +105,10 @@ class Buoy(object):
             'datetime': None,
         }
 
-    def _get(self, observation):
-        return self.__dict__.setdefault(observation, self.fetch(observation))
+    def _get(self, observation, as_group=None):
+        return self.__dict__.setdefault(observation, self.fetch(observation, as_group))
 
-    def fetch(self, observation):
+    def fetch(self, observation, as_group=None):
         params = {
             'offering': 'urn:ioos:station:wmo:{}'.format(self.id),
             'observedproperty': observation,
@@ -120,7 +120,7 @@ class Buoy(object):
         try:
             reader = csv.DictReader(StringIO(request.text))
 
-            if observation in ('currents', 'waves', 'winds'):
+            if as_group:
                 return _degroup(reader, getattr(properties, observation))
 
             else:
@@ -134,6 +134,7 @@ class Buoy(object):
 
         self.__dict__['station_id'] = result.get('station_id')
         self.__dict__['sensor_id'] = result.get('sensor_id')
+
         try:
             self.__dict__['lon'] = float(result.get('longitude (degree)'))
             self.__dict__['lat'] = float(result.get('latitude (degree)'))
@@ -155,7 +156,10 @@ class Buoy(object):
 
     @property
     def currents(self):
-        return self._get('currents')
+        try:
+            return self._get('currents', as_group=True)
+        except IndexError:
+            pass
 
     @property
     def sea_floor_depth_below_sea_surface(self):
@@ -175,11 +179,17 @@ class Buoy(object):
 
     @property
     def waves(self):
-        return self._get('waves')[0]
+        try:
+            return self._get('waves', as_group=True)[0]
+        except IndexError:
+            pass
 
     @property
     def winds(self):
-        return self._get('winds')[0]
+        try:
+            return self._get('winds', as_group=True)[0]
+        except IndexError:
+            pass
 
     @property
     def image_url(self):
