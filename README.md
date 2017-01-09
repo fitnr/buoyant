@@ -29,7 +29,7 @@ Get buoy location.
 
 Get the time the measurements were made. This can be some time ago!
 ```python
-> buoy.datetime
+> buoy.air_pressure_at_sea_level.datetime
 datetime.datetime(2015, 8, 18, 11, 40, tzinfo=<UTC>)
 ```
 

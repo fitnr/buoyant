@@ -34,8 +34,14 @@ eventtime=latest
 '''
 
 
-def parse_unit(prop, dictionary):
+def parse_unit(prop, dictionary, dt=None):
     '''Do a fuzzy match for `prop` in the dictionary, taking into account unit suffix.'''
+    # add the observation's time
+    try:
+        dt = timezone.parse_datetime(dictionary.get('date_time'))
+    except TypeError:
+        dt = None
+
     matches = [k for k in dictionary.keys() if prop in k]
 
     try:
@@ -48,7 +54,7 @@ def parse_unit(prop, dictionary):
     # Sometimes we get a list of values (e.g. waves)
     if ';' in value:
         if unit:
-            return [Observation(v, unit.group(1)) for v in value.split(';')]
+            return [Observation(v, unit.group(1), dt) for v in value.split(';')]
         else:
             return value.split(';')
 
@@ -56,7 +62,7 @@ def parse_unit(prop, dictionary):
     if not value or not unit:
         return value or None
 
-    return Observation(value, unit.group(1))
+    return Observation(value, unit.group(1), dt)
 
 
 def _degroup(iterable, propertylist):
@@ -131,11 +137,9 @@ class Buoy(object):
         try:
             self.__dict__['lon'] = float(result.get('longitude (degree)'))
             self.__dict__['lat'] = float(result.get('latitude (degree)'))
-            self.__dict__['datetime'] = timezone.parse_datetime(result.get('date_time'))
 
         except TypeError:
             self.__dict__['lon'], self.__dict__['lat'] = None, None
-            self.__dict__['datetime'] = None
 
         self.__dict__['depth'] = parse_unit('depth', result)
 
@@ -206,16 +210,13 @@ class Buoy(object):
     def depth(self):
         return self.__dict__.get('depth')
 
-    @property
-    def datetime(self):
-        return self.__dict__.get('datetime')
-
 
 class Observation(float):
 
-    def __init__(self, value, unit):
+    def __init__(self, value, unit, datetime=None):
         self.value = value
         self._unit = unit
+        self._datetime = datetime
 
     def __new__(cls, value, *args):
         return float.__new__(cls, value)
@@ -223,6 +224,10 @@ class Observation(float):
     @property
     def unit(self):
         return self._unit
+
+    @property
+    def datetime(self):
+        return self._datetime
 
     def __repr__(self):
         return "Observation({}, '{}')".format(self.__float__(), self.unit)
