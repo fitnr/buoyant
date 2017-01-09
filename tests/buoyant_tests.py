@@ -31,7 +31,7 @@ class BuoyTestCase(unittest.TestCase):
         assert x.unit == 'mS/cm'
         currents = self.b.currents
         self.assertIsInstance(currents, list)
-        assert isinstance(self.b.datetime, datetime.datetime)
+        assert isinstance(x.datetime, datetime.datetime)
         assert isinstance(self.b.image, BytesIO)
         assert isinstance(self.b.__dict__['lat'], float)
         assert isinstance(self.b.coords, tuple)
@@ -47,7 +47,7 @@ class BuoyTestCase(unittest.TestCase):
         self.assertIsNotNone(self.b.sea_water_temperature)
 
     def test_parse_unit(self):
-        dictionary = {'magic (pixie dust)': 42}
+        dictionary = {'magic (pixie dust)': '42'}
         x = buoy.parse_unit('magic', dictionary)
         assert isinstance(x, buoyant.Observation)
 
