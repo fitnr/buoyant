@@ -42,6 +42,7 @@ def parse_unit(prop, dictionary, dt=None):
     except TypeError:
         dt = None
 
+    # 'prop' is a stub of the property's attribute key, so search for matches
     matches = [k for k in dictionary.keys() if prop in k]
 
     try:
@@ -49,14 +50,18 @@ def parse_unit(prop, dictionary, dt=None):
         unit = re.search(r' \(([^)]+)\)', matches[0])
 
     except IndexError:
+        # No matches: fail out
         return None
 
     # Sometimes we get a list of values (e.g. waves)
     if ';' in value:
+        # Ignore empty values
+        values = [val for val in value.split(';') if val != '']
+
         if unit:
-            return [Observation(v, unit.group(1), dt) for v in value.split(';')]
+            return [Observation(v, unit.group(1), dt) for v in values]
         else:
-            return value.split(';')
+            return values
 
     # Sometimes there's no value! Sometimes there's no unit!
     if not value or not unit:
