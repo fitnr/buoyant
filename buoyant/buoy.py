@@ -20,8 +20,8 @@ from pytz import utc
 from . import properties, timezone
 
 # Both take station as a GET argument.
-OBS_ENDPOINT = "http://sdf.ndbc.noaa.gov/sos/server.php"
-CAM_ENDPOINT = 'http://www.ndbc.noaa.gov/buoycam.php'
+OBS_ENDPOINT = "https://sdf.ndbc.noaa.gov/sos/server.php"
+CAM_ENDPOINT = 'https://www.ndbc.noaa.gov/buoycam.php'
 
 '''
 request=GetObservation
