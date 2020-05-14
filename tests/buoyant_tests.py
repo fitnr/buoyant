@@ -101,5 +101,6 @@ class BuoyTestCase(unittest.TestCase):
         waves = buoyant.buoy._degroup(sampledata, buoyant.properties.waves)
         self.assertEqual(waves[0]['sea_surface_wind_wave_significant_height'], buoy.Observation(0.17, 'm'))
 
+
 if __name__ == '__main__':
     unittest.main()

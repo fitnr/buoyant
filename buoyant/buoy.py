@@ -60,8 +60,8 @@ def parse_unit(prop, dictionary, dt=None):
 
         if unit:
             return [Observation(v, unit.group(1), dt) for v in values]
-        else:
-            return values
+
+        return values
 
     # Sometimes there's no value! Sometimes there's no unit!
     if not value or not unit:
@@ -128,8 +128,10 @@ class Buoy(object):
             if as_group:
                 return _degroup(reader, getattr(properties, observation))
 
-            else:
+            try:
                 result = next(reader)
+            except StopIteration:
+                result = {}
 
             if 'ows:ExceptionReport' in str(result):
                 raise AttributeError(observation)
@@ -233,7 +235,7 @@ class Observation(float):
         self._unit = unit
         self._datetime = datetime
 
-    def __new__(cls, value, *args):
+    def __new__(cls, value, *_):
         return float.__new__(cls, value)
 
     @property

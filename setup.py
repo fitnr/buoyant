@@ -14,13 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from setuptools import setup
 
-try:
-    readme = open('README.rst').read()
-except IOError:
-    try:
-        readme = open('README.md').read()
-    except IOError:
-        readme = ''
+with open('README.md') as f:
+    readme = f.read()
 
 with open('buoyant/__init__.py') as i:
     version = next(r for r in i.readlines() if '__version__' in r).split('=')[1].strip('"\' \n')
@@ -33,6 +28,7 @@ setup(
     description="Wrapper for the NOAA National Data Buoy Center",
 
     long_description=readme,
+    long_description_content_type='text/markdown',
 
     url='https://github.com/fitnr/buoyant',
 
@@ -46,15 +42,17 @@ setup(
 
     install_requires=[
         'requests >=2.4.1, <3.0',
-        'pytz>=2015.6, <2018'
+        'pytz>=2015.6'
     ],
 
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Atmospheric Science',
         'Intended Audience :: Science/Research',
     ],
