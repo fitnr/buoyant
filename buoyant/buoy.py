@@ -110,7 +110,6 @@ class Buoy:
         self.__dict__ = {
             'lat': None,
             'lon': None,
-            'datetime': None,
         }
 
     def _get(self, observation, as_group=None):
@@ -118,6 +117,9 @@ class Buoy:
 
     def fetch(self, observation, as_group=None):
         """Fetch an observation for this buoy from the API."""
+        if observation not in properties.general:
+            raise AttributeError(observation)
+
         params = {
             'offering': 'urn:ioos:station:wmo:{}'.format(self.id),
             'observedproperty': observation,
@@ -126,29 +128,22 @@ class Buoy:
         params.update(self.params)
         request = requests.get(OBS_ENDPOINT, params=params)
 
+        reader = csv.DictReader(StringIO(request.text))
+
+        if as_group:
+            return _degroup(reader, getattr(properties, observation))
+
         try:
-            reader = csv.DictReader(StringIO(request.text))
-
-            if as_group:
-                return _degroup(reader, getattr(properties, observation))
-
-            try:
-                result = next(reader)
-            except StopIteration:
-                result = {}
-
-            if 'ows:ExceptionReport' in str(result):
-                raise AttributeError(observation)
-
+            result = next(reader)
         except StopIteration:
-            raise AttributeError(observation)
+            result = {}
 
-        self.__dict__['station_id'] = result.get('station_id')
-        self.__dict__['sensor_id'] = result.get('sensor_id')
+        self.__dict__.setdefault('station_id', result.get('station_id'))
+        self.__dict__.setdefault('sensor_id', result.get('sensor_id'))
 
         try:
-            self.__dict__['lon'] = float(result.get('longitude (degree)'))
-            self.__dict__['lat'] = float(result.get('latitude (degree)'))
+            self.__dict__['lon'] = self.__dict__['lon'] or float(result.get('longitude (degree)'))
+            self.__dict__['lat'] = self.__dict__['lat'] or float(result.get('latitude (degree)'))
 
         except TypeError:
             self.__dict__['lon'], self.__dict__['lat'] = None, None

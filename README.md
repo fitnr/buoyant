@@ -33,10 +33,10 @@ Get the time the measurements were made. This can be some time ago!
 datetime.datetime(2015, 8, 18, 11, 40, tzinfo=<UTC>)
 ```
 
-Not all stations report all data.
+Not all stations report all data at all times. Be prepared to handle empty attributes.
 ```python
 > buoy.wave_height
-AttributeError
+None
 ```
 
 Clear the buoy object's data dictionary. This isn't very useful, since the buoys update only every hour or so.
@@ -86,7 +86,7 @@ There are two ways to a buoy can be missing a certain data field. Either there's
 > buoy.winds
 # None, because while this is usually recorded, it hasn't been lately.
 > sturgeon.waves
-AttributeError
+None
 ````
 
 ### Measurements included
@@ -109,7 +109,7 @@ Currents data is returned as a `list` of `dict`s with current information at dif
 
 ### Compatibility
 
-Buoyant is compatible with Python 2 and 3.
+Buoyant is compatible with Python 3.5+.
 
 ### License
 
