@@ -1,6 +1,9 @@
+"""General tests for Buoyant library."""
+
 import datetime
 import unittest
 from io import BytesIO
+
 import buoyant
 from buoyant import buoy
 
@@ -41,6 +44,7 @@ class BuoyTestCase(unittest.TestCase):
         self.b = buoyant.Buoy("41012")
 
     def test_observation(self):
+        """Test the Observation class."""
         self.assertTrue(issubclass(buoyant.Observation, float))
         subint = float.__new__(buoyant.Observation, 11)
         assert subint == 11
@@ -68,6 +72,7 @@ class BuoyTestCase(unittest.TestCase):
         assert (self.b.__dict__["lat"], self.b.__dict__["lon"]) == self.b.coords
 
     def test_keys(self):
+        """Test that observation attributes exist in Buoy class."""
         self.assertIsNotNone(self.b.sea_water_salinity)
         self.assertIsNotNone(self.b.air_pressure_at_sea_level)
         self.assertIsNotNone(self.b.air_temperature)
