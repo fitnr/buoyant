@@ -15,8 +15,10 @@
 import csv
 import re
 from io import BytesIO, StringIO
+
 import requests
 from pytz import utc
+
 from . import properties, timezone
 
 # Both take station as a GET argument.
@@ -34,13 +36,13 @@ eventtime=latest
 '''
 
 
-def parse_unit(prop, dictionary, dt=None):
+def parse_unit(prop, dictionary, timestamp=None):
     '''Do a fuzzy match for `prop` in the dictionary, taking into account unit suffix.'''
     # add the observation's time
     try:
-        dt = timezone.parse_datetime(dictionary.get('date_time'))
+        timestamp = timestamp or timezone.parse_datetime(dictionary.get('date_time'))
     except TypeError:
-        dt = None
+        timestamp = None
 
     # 'prop' is a stub of the property's attribute key, so search for matches
     matches = [k for k in dictionary.keys() if prop in k]
@@ -59,7 +61,7 @@ def parse_unit(prop, dictionary, dt=None):
         values = [val for val in value.split(';') if val != '']
 
         if unit:
-            return [Observation(v, unit.group(1), dt) for v in values]
+            return [Observation(v, unit.group(1), timestamp) for v in values]
 
         return values
 
@@ -67,7 +69,7 @@ def parse_unit(prop, dictionary, dt=None):
     if not value or not unit:
         return value or None
 
-    return Observation(value, unit.group(1), dt)
+    return Observation(value, unit.group(1), timestamp)
 
 
 def _degroup(iterable, propertylist):
@@ -81,7 +83,7 @@ urn:ioos:station:wmo:41012,urn:ioos:sensor:wmo:41012::baro1,30.04,-80.55,2014-02
 '''
 
 
-class Buoy(object):
+class Buoy:
 
     '''Wrapper for the NDBC Buoy information mini-API'''
 
@@ -104,6 +106,7 @@ class Buoy(object):
         self.eventtime = eventtime or 'latest'
 
     def refresh(self):
+        """Reset data for this buoy. New values will be fetched in the future."""
         self.__dict__ = {
             'lat': None,
             'lon': None,
@@ -114,10 +117,11 @@ class Buoy(object):
         return self.__dict__.setdefault(observation, self.fetch(observation, as_group))
 
     def fetch(self, observation, as_group=None):
+        """Fetch an observation for this buoy from the API."""
         params = {
             'offering': 'urn:ioos:station:wmo:{}'.format(self.id),
             'observedproperty': observation,
-            'eventtime': self.eventtime
+            'eventtime': self.eventtime,
         }
         params.update(self.params)
         request = requests.get(OBS_ENDPOINT, params=params)
@@ -230,6 +234,8 @@ class Buoy(object):
 
 class Observation(float):
 
+    """An observation is a numeric object along with a unit string."""
+
     def __init__(self, value, unit, datetime=None):
         self.value = value
         self._unit = unit
@@ -240,10 +246,12 @@ class Observation(float):
 
     @property
     def unit(self):
+        """Return this observation's unit."""
         return self._unit
 
     @property
     def datetime(self):
+        """Return the timestamp that this observation was made."""
         return self._datetime
 
     def __repr__(self):
